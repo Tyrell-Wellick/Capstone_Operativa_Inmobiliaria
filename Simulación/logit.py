@@ -9,7 +9,7 @@ import numpy as np
 from functools import reduce
 
 
-tuplas = [(0, 180), (120, 160), (100, 180), (100, 170), (220, 190)]
+#tuplas = [(0, 180), (120, 160), (100, 180), (100, 170), (220, 190)]
 
 def calculo_probs(lista):
     coef = 5
@@ -20,5 +20,5 @@ def calculo_probs(lista):
     probs = [i/suma for i in expos]
     return utis, probs
 
-print(calculo_probs(tuplas))
+#print(calculo_probs(tuplas)[1])
     

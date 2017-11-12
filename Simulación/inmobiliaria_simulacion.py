@@ -5,8 +5,9 @@ Created on ??
 @author: Luis
 """
 
-from random import random, expovariate
-from .cargar_modelo_comp import Prediccion_Preferencias
+from random import randint, expovariate, random
+from cargar_modelo_comp import Prediccion_Preferencias
+from logit import calculo_probs
 
 
 predictor = Prediccion_Preferencias()
@@ -28,8 +29,14 @@ class Casa:
 
     def __init__(self, atributos, precio):
         self.atributos = atributos
+        """Por ahora definiremos los atributos de forma aleatoria"""
+        self.atributos = [randint(0,1), randint(0,1), randint(0,1), randint(0,1),
+                            randint(0,1), randint(1,5), randint(0,1), randint(1,2),
+                            randint(0,1), randint(0,1), randint(0,1), randint(0,1),
+                            randint(0,1)]
         self.precio = precio
         self._vendida = False
+        self.indice = 0 #Esto se ocupa para identificar cual fue la casa vendida
 
     @property
     def vendida(self):
@@ -46,10 +53,39 @@ class Inmobiliaria:
 
     def __init__(self):
         self.nombre = "Inmobiliaria S.A"
-        self.precios_casas = [random.randint(100, 200) for i in range(100)]
+        #Por ahora las casa se definen con precios random y atributos random
+        self.precios_casas = [randint(100, 200) for i in range(100)]
+        self.casas = [Casa("", i) for i in self.precios_casas]
 
     def atender(self, cliente):
-        pass
+        tuplas = list()
+        ind = 1
+        for i in self.casas:
+            if not i.vendida:
+                """Se concatenan los atributos de la casa con las preferencias 
+                del cliente, luego se hacen tuplas con el precio y la prediccion
+                y finalmente se calculan las probabilidades de no compra. Se le
+                da un indice a cada casa para identificar luego cual es la que
+                se vende"""
+                test = i.atributos + cliente.preferencias
+                tupla = (i.precio, predictor.prediccion(test)[0])
+                tuplas.append(tupla)
+                i.indice = ind
+                ind += 1
+        utis, probs = calculo_probs(tuplas)
+        """Dada las probabilidades de no compra comprobamos si alguna es vendida"""
+        value = random()
+        ind = 1 #Identificador de la casa
+        for i in probs:
+            """Si el valor es mayor a la probabilidad de no compra se busca la casa
+            con tal indice, se marca como vendida y se cierra el ciclo."""
+            if value > i:
+                for j in self.casas:
+                    if j.indice == ind:
+                        j.vendida = True
+                print("Casa vendida")
+                break
+            ind += 1
 
 
 class Simulacion:
@@ -63,11 +99,12 @@ class Simulacion:
         self.tasa_llegada_cliente3 = tasa_llegada3
         self.tasa_llegada_cliente4 = tasa_llegada4
         self.tiempo_simulacion = 1
-        #self.inmobiliaria = Inmobiliaria(tipos)
+        self.inmobiliaria = Inmobiliaria()
         self.clientes_tipo1_atendidos = 0
         self.clientes_tipo2_atendidos = 0
         self.clientes_tipo3_atendidos = 0
         self.clientes_tipo4_atendidos = 0
+        self.clientes_perdidos = 0
 
     def llegadas_clientes(self, tasa_llegada1, tasa_llegada2, tasa_llegada3, tasa_llegada4):
         tiempos_entre_llegada_clientes1 = [round(expovariate(tasa_llegada1))]
@@ -135,30 +172,33 @@ class Simulacion:
         while self.tiempo_simulacion <= self.tiempo_maximo_sim:
             """Verificamos si en el tiempo actual(día) de la simulación llega algún cliente"""
             if not(self.tiempo_simulacion in self.tiempos_llegada_clientes):
-                print("[DIA {}]: No llegan clientes a la inmobiliaria".format(self.tiempo_simulacion))
+                print("[HORA {}]: No llegan clientes a la inmobiliaria".format(self.tiempo_simulacion))
             else:
-                text = "[DIA {}]: Llega(n) ".format(self.tiempo_simulacion)
+                text = "[HORA {}]: Llega(n) ".format(self.tiempo_simulacion)
                 if self.tiempo_simulacion in self.tiempos_llegada_clientes1:
                     text += "{} cliente(s) tipo 1 ".format(self.tiempos_llegada_clientes1.count(self.tiempo_simulacion))
                     for i in range(self.tiempos_llegada_clientes1.count(self.tiempo_simulacion)):
                         nuevo_cliente = Persona(1)
                         """Acá hay que simular una atención de la inmobiliaria"""
-
+                        self.inmobiliaria.atender(nuevo_cliente)
                 if self.tiempo_simulacion in self.tiempos_llegada_clientes2:
                     text += "{} cliente(s) tipo 2 ".format(self.tiempos_llegada_clientes2.count(self.tiempo_simulacion))
                     for i in range(self.tiempos_llegada_clientes2.count(self.tiempo_simulacion)):
                         nuevo_cliente = Persona(2)
                         """Acá hay que simular una atención de la inmobiliaria"""
+                        self.inmobiliaria.atender(nuevo_cliente)
                 if self.tiempo_simulacion in self.tiempos_llegada_clientes3:
                     text += "{} cliente(s) tipo 3 ".format(self.tiempos_llegada_clientes3.count(self.tiempo_simulacion))
                     for i in range(self.tiempos_llegada_clientes3.count(self.tiempo_simulacion)):
                         nuevo_cliente = Persona(3)
                         """Acá hay que simular una atención de la inmobiliaria"""
+                        self.inmobiliaria.atender(nuevo_cliente)
                 if self.tiempo_simulacion in self.tiempos_llegada_clientes4:
                     text += "{} cliente(s) tipo 4 ".format(self.tiempos_llegada_clientes4.count(self.tiempo_simulacion))
                     for i in range(self.tiempos_llegada_clientes4.count(self.tiempo_simulacion)):
                         nuevo_cliente = Persona(4)
                         """Acá hay que simular una atención de la inmobiliaria"""
+                        self.inmobiliaria.atender(nuevo_cliente)
                 print(text)
             self.tiempo_simulacion += 1
         print("\n\n\n")
@@ -168,13 +208,19 @@ class Simulacion:
               " tipo 4: {}, total: {}".format(len(self.tiempos_llegada_clientes1),
               len(self.tiempos_llegada_clientes2), len(self.tiempos_llegada_clientes3),
               len(self.tiempos_llegada_clientes4), len(self.tiempos_llegada_clientes)))
-        print("[CLIENTES 1 COMPRARON]: 0")
+        """print("[CLIENTES 1 COMPRARON]: 0")
         print("[CLIENTES 2 COMPRARON]: 0")
         print("[CLIENTES 3 COMPRARON]: 0")
         print("[CLIENTES 4 COMPRARON]: 0")
-        print("[CLIENTES PERDIDOS]: {}".format(len(self.tiempos_llegada_clientes) - 0))
-        print("[CASAS VENDIDAS]: 0")
-        print("[INGRESOS]: $0")
+        print("[CLIENTES PERDIDOS]: {}".format(len(self.tiempos_llegada_clientes) - 0))"""
+        casas_vendidas = 0
+        ingresos = 0
+        for i in self.inmobiliaria.casas:
+            if i.vendida:
+                casas_vendidas += 1
+                ingresos += i.precio
+        print("[CASAS VENDIDAS]: {}".format(casas_vendidas))
+        print("[INGRESOS]: ${}".format(ingresos))
 
 
 
