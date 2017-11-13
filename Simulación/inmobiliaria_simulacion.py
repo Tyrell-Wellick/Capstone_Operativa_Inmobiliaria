@@ -33,7 +33,7 @@ class Casa:
         self.atributos = [randint(0,1), randint(0,1), randint(0,1), randint(0,1),
                             randint(0,1), randint(1,5), randint(0,1), randint(1,2),
                             randint(0,1), randint(0,1), randint(0,1), randint(0,1),
-                            randint(0,1)]
+                            randint(0,1), randint(0,1)]
         self.precio = precio
         self._vendida = False
         self.indice = 0 #Esto se ocupa para identificar cual fue la casa vendida

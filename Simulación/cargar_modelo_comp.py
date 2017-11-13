@@ -22,10 +22,10 @@ class Prediccion_Preferencias:
 
         """
         test tiene los atributos de la casa y del cliente en una lista"""
-        #self.test = [0, 0, 0, 0, 0, 5, 1, 2, 1, 1, 0, 1, 1,
-        #        8.132, 1.74, 6.24, 2.24, 1.60, 1.94, 1.65, 4.01, 1.64]
-        #print("Predicción: {}".format(self.modelo.predict([self.test])))  #muestra la prediccion
-
+        """self.test = [0, 0, 0, 0, 0, 5, 1, 2, 1, 1, 0, 1, 1, 0,
+                8.132, 1.74, 6.24, 2.24, 1.60, 1.94, 1.65, 4.01, 1.64]
+        print("Predicción: {}".format(self.modelo.predict([self.test])))  #muestra la prediccion
+        """
 
         self.centros = [[7.22222222, 1.66666667, 6.44444444, 1.44444444, 1.77777778,
                     1.77777778, 1.22222222, 3.11111111, 1.66666667, 124.51333333],
@@ -49,4 +49,3 @@ class Prediccion_Preferencias:
 
     def prediccion(self, lista):
         return self.modelo.predict([lista])
-
