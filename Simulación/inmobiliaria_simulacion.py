@@ -9,6 +9,7 @@ from random import randint, expovariate, random
 from cargar_modelo_comp import Prediccion_Preferencias
 from logit import calculo_probs
 from importar_datos import importar_casas
+from documentar import Documentador
 
 
 predictor = Prediccion_Preferencias()
@@ -65,7 +66,7 @@ class Inmobiliaria:
             #self.casas.append(Casa(atributos[i][0], atributos[i][1:15], atributos[i][15]))
 
 
-    def atender(self, cliente):
+    def atender(self, cliente, documentador, tiempo):
         tuplas = list()
         casas_disponibles = list()
         for i in self.casas:
@@ -94,6 +95,7 @@ class Inmobiliaria:
             if casas_disponibles[i].probabilidad < value:
                 casas_disponibles[i].vendida = True
                 print("{} vendida".format(casas_disponibles[i].identificador))
+                documentador.casa_vendida(casas_disponibles[i], tiempo)
                 break
 
 
@@ -110,6 +112,7 @@ class Simulacion:
         self.clientes_tipo3_atendidos = 0
         self.clientes_tipo4_atendidos = 0
         self.clientes_perdidos = 0
+        self.resultados = Documentador(self.inmobiliaria)
 
     def llegadas_clientes(self, tasa_llegada):
         tiempos_entre_llegada_clientes = [round(expovariate(tasa_llegada))]
@@ -149,19 +152,19 @@ class Simulacion:
                     if value <= 0.432:
                         text += "Cliente tipo 1 "
                         nuevo_cliente = Persona(1)
-                        self.inmobiliaria.atender(nuevo_cliente)
+                        self.inmobiliaria.atender(nuevo_cliente, self.resultados, self.tiempo_simulacion)
                     elif value <= 0.724:
                         text += "Cliente tipo 2 "
                         nuevo_cliente = Persona(2)
-                        self.inmobiliaria.atender(nuevo_cliente)
+                        self.inmobiliaria.atender(nuevo_cliente, self.resultados, self.tiempo_simulacion)
                     elif value <= 0.927:
                         text += "Cliente tipo 3 "
                         nuevo_cliente = Persona(3)
-                        self.inmobiliaria.atender(nuevo_cliente)
+                        self.inmobiliaria.atender(nuevo_cliente, self.resultados, self.tiempo_simulacion)
                     else:
                         text += "Cliente tipo 4 "
                         nuevo_cliente = Persona(4)
-                        self.inmobiliaria.atender(nuevo_cliente)
+                        self.inmobiliaria.atender(nuevo_cliente, self.resultados, self.tiempo_simulacion)
                 print(text)
             self.tiempo_simulacion += 1
         print("\n\n\n")
@@ -185,6 +188,9 @@ class Simulacion:
         print("[CASAS VENDIDAS]: {}".format(casas_vendidas))
         print("[INGRESOS]: ${}".format(ingresos))
 
+        #Guardar los resultados en el excel
+        self.resultados.fin_simulacion()
+
 
 
 if __name__ == '__main__':
@@ -194,14 +200,11 @@ if __name__ == '__main__':
     """En este ejemplo inicializamos la simulacion en 2 semanas, o 336 horas como tiempo maximo."""
     maximo_tiempo = 336
 
-    """Definimos la tasa de llegada de los clientes en:
-                                   1) un cliente tipo 1 cada 96 horas.
-                                   2) un cliente tipo 2 cada 72 horas.
-                                   3) un cliente tipo 3 cada 48 horas.
-                                   4) un cliente tipo 4 cada 24 horas."""
 
-    """Tasas de llegada de los clientes"""
-    tasa_llegada_clientes = 1 / 96
+    """Tasas de llegada de los clientes
+    Asumiendo meses de 30 dias y una tasa de 140 clientes por mes
+    la tasa queda como 140 / 720"""
+    tasa_llegada_clientes = 140 / 720
 
     s = Simulacion(maximo_tiempo, tasa_llegada_clientes)
     s.run()
