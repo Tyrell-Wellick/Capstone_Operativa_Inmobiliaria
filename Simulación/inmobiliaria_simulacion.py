@@ -8,6 +8,7 @@ Created on ??
 from random import randint, expovariate, random
 from cargar_modelo_comp import Prediccion_Preferencias
 from logit import calculo_probs
+from importar_datos import importar_casas
 
 
 predictor = Prediccion_Preferencias()
@@ -27,16 +28,14 @@ class Persona:
 class Casa:
 
 
-    def __init__(self, atributos, precio):
+    def __init__(self, identificador, atributos, precio):
+        self.identificador = identificador
         self.atributos = atributos
-        """Por ahora definiremos los atributos de forma aleatoria"""
-        self.atributos = [randint(0,1), randint(0,1), randint(0,1), randint(0,1),
-                            randint(0,1), randint(1,5), randint(0,1), randint(1,2),
-                            randint(0,1), randint(0,1), randint(0,1), randint(0,1),
-                            randint(0,1), randint(0,1)]
         self.precio = precio
         self._vendida = False
-        self.indice = 0 #Esto se ocupa para identificar cual fue la casa vendida
+        #Estas variables sirven al momento de atender un cliente
+        self.utilidad = 0
+        self.probabilidad = 0
 
     @property
     def vendida(self):
@@ -53,51 +52,57 @@ class Inmobiliaria:
 
     def __init__(self):
         self.nombre = "Inmobiliaria S.A"
-        #Por ahora las casa se definen con precios random y atributos random
-        self.precios_casas = [randint(100, 200) for i in range(100)]
-        self.casas = [Casa("", i) for i in self.precios_casas]
+        #Por ahora las casa se definen con precios random y los atributos del excel 
+        precios_casas = [randint(100, 200) for i in range(100)]
+
+        atributos = importar_casas()
+        self.casas = []
+        for i in range(0, 100):
+            self.casas.append(Casa(atributos[i][0], atributos[i][1:15], precios_casas[i]))
+
+            """ En caso que quisieramos poner los precios de las casa del excel
+            habría que ocupar esta linea de codigo en vez de la anterior"""
+            #self.casas.append(Casa(atributos[i][0], atributos[i][1:15], atributos[i][15]))
+
 
     def atender(self, cliente):
         tuplas = list()
-        ind = 1
+        casas_disponibles = list()
         for i in self.casas:
             if not i.vendida:
                 """Se concatenan los atributos de la casa con las preferencias 
                 del cliente, luego se hacen tuplas con el precio y la prediccion
-                y finalmente se calculan las probabilidades de no compra. Se le
-                da un indice a cada casa para identificar luego cual es la que
-                se vende"""
+                y finalmente se calculan las probabilidades de no compra."""
+                casas_disponibles.append(i)
                 test = i.atributos + cliente.preferencias
                 tupla = (i.precio, predictor.prediccion(test)[0])
                 tuplas.append(tupla)
-                i.indice = ind
-                ind += 1
         utis, probs = calculo_probs(tuplas)
-        """Dada las probabilidades de no compra comprobamos si alguna es vendida"""
-        value = random()
-        ind = 1 #Identificador de la casa
-        for i in probs:
-            """Si el valor es mayor a la probabilidad de no compra se busca la casa
-            con tal indice, se marca como vendida y se cierra el ciclo."""
-            if value > i:
-                for j in self.casas:
-                    if j.indice == ind:
-                        j.vendida = True
-                print("Casa vendida")
+
+        """Asignamos a cada casa su correspondiente utlidad y 
+        probabilidad de no compra"""
+        for i in range(len(casas_disponibles)):
+            casas_disponibles[i].utilidad = utis[i]
+            casas_disponibles[i].probabilidad = probs[i]
+
+        #Se ordenan las casas segun su utilidad de mayor a menor
+        casas_disponibles = sorted(casas_disponibles, key=lambda x: x.utilidad, reverse=True)
+
+        """Comprobamos con las primeras 5 (se puede cambiar) casas si alguna se vende"""
+        for i in range(5):
+            value = random()
+            if casas_disponibles[i].probabilidad < value:
+                casas_disponibles[i].vendida = True
+                print("{} vendida".format(casas_disponibles[i].identificador))
                 break
-            ind += 1
 
 
 class Simulacion:
 
 
-    def __init__(self, tiempo_maximo, tasa_llegada1, tasa_llegada2, tasa_llegada3,
-                 tasa_llegada4):
+    def __init__(self, tiempo_maximo, tasa_llegada):
         self.tiempo_maximo_sim = tiempo_maximo
-        self.tasa_llegada_cliente1 = tasa_llegada1
-        self.tasa_llegada_cliente2 = tasa_llegada2
-        self.tasa_llegada_cliente3 = tasa_llegada3
-        self.tasa_llegada_cliente4 = tasa_llegada4
+        self.tasa_llegada_clientes = tasa_llegada
         self.tiempo_simulacion = 1
         self.inmobiliaria = Inmobiliaria()
         self.clientes_tipo1_atendidos = 0
@@ -106,62 +111,26 @@ class Simulacion:
         self.clientes_tipo4_atendidos = 0
         self.clientes_perdidos = 0
 
-    def llegadas_clientes(self, tasa_llegada1, tasa_llegada2, tasa_llegada3, tasa_llegada4):
-        tiempos_entre_llegada_clientes1 = [round(expovariate(tasa_llegada1))]
-        tiempos_entre_llegada_clientes2 = [round(expovariate(tasa_llegada2))]
-        tiempos_entre_llegada_clientes3 = [round(expovariate(tasa_llegada3))]
-        tiempos_entre_llegada_clientes4 = [round(expovariate(tasa_llegada4))]
-        while sum(tiempos_entre_llegada_clientes1) <= 336:
-            tiempos_entre_llegada_clientes1.append(round(expovariate(tasa_llegada1)))
-        while sum(tiempos_entre_llegada_clientes2) <= 336:
-            tiempos_entre_llegada_clientes2.append(round(expovariate(tasa_llegada2)))
-        while sum(tiempos_entre_llegada_clientes3) <= 336:
-            tiempos_entre_llegada_clientes3.append(round(expovariate(tasa_llegada3)))
-        while sum(tiempos_entre_llegada_clientes4) <= 336:
-            tiempos_entre_llegada_clientes4.append(round(expovariate(tasa_llegada4)))
-        tiempos_entre_llegada_clientes1.pop()
-        tiempos_entre_llegada_clientes2.pop()
-        tiempos_entre_llegada_clientes3.pop()
-        tiempos_entre_llegada_clientes4.pop()
+    def llegadas_clientes(self, tasa_llegada):
+        tiempos_entre_llegada_clientes = [round(expovariate(tasa_llegada))]
+        while sum(tiempos_entre_llegada_clientes) <= 336:
+            tiempos_entre_llegada_clientes.append(round(expovariate(tasa_llegada)))
+        tiempos_entre_llegada_clientes.pop()
         print("-" * 40 + "DEFINICION DE TIEMPOS" + "-" * 40)
         print("\n")
-        print("TIEMPOS ENTRE LLEGADAS CLIENTE 1: {}, suma: {}".format(tiempos_entre_llegada_clientes1,
-                                                                      sum(tiempos_entre_llegada_clientes1)))
-        print("TIEMPOS ENTRE LLEGADAS CLIENTE 2: {}, suma: {}".format(tiempos_entre_llegada_clientes2,
-                                                                      sum(tiempos_entre_llegada_clientes2)))
-        print("TIEMPOS ENTRE LLEGADAS CLIENTE 3: {}, suma: {}".format(tiempos_entre_llegada_clientes3,
-                                                                      sum(tiempos_entre_llegada_clientes3)))
-        print("TIEMPOS ENTRE LLEGADAS CLIENTE 4: {}, suma: {}".format(tiempos_entre_llegada_clientes4,
-                                                                      sum(tiempos_entre_llegada_clientes4)))
+        print("TIEMPOS ENTRE LLEGADAS CLIENTES: {}, suma: {}".format(tiempos_entre_llegada_clientes,
+                                                                      sum(tiempos_entre_llegada_clientes)))
 
+        self.tiempos_llegada_clientes = [sum(tiempos_entre_llegada_clientes[:i]) for i in \
+                                    range(len(tiempos_entre_llegada_clientes)+1)][1::]
 
-        self.tiempos_llegada_clientes1 = [sum(tiempos_entre_llegada_clientes1[:i]) for i in \
-                                    range(len(tiempos_entre_llegada_clientes1)+1)][1::]
-        self.tiempos_llegada_clientes2 = [sum(tiempos_entre_llegada_clientes2[:i]) for i in \
-                                    range(len(tiempos_entre_llegada_clientes2)+1)][1::]
-        self.tiempos_llegada_clientes3 = [sum(tiempos_entre_llegada_clientes3[:i]) for i in \
-                                    range(len(tiempos_entre_llegada_clientes3)+1)][1::]
-        self.tiempos_llegada_clientes4 = [sum(tiempos_entre_llegada_clientes4[:i]) for i in \
-                                    range(len(tiempos_entre_llegada_clientes4)+1)][1::]
-
-        print("\n")
-        print("TIEMPOS LLEGADA CLIENTE 1: {}".format(self.tiempos_llegada_clientes1))
-        print("TIEMPOS LLEGADA CLIENTE 2: {}".format(self.tiempos_llegada_clientes2))
-        print("TIEMPOS LLEGADA CLIENTE 3: {}".format(self.tiempos_llegada_clientes3))
-        print("TIEMPOS LLEGADA CLIENTE 4: {}".format(self.tiempos_llegada_clientes4))
-
-        self.tiempos_llegada_clientes = sorted(self.tiempos_llegada_clientes1 +
-                                                  self.tiempos_llegada_clientes2 +
-                                                  self.tiempos_llegada_clientes3 +
-                                                  self.tiempos_llegada_clientes4)
         print("\n")
         print("TIEMPOS LLEGADA CLIENTES: {}".format(self.tiempos_llegada_clientes))
 
     def run(self):
         """Este metodo ejecuta la simulacion de la inmobiliaria
         se estima aleatoreamente la llegada de clientes"""
-        self.llegadas_clientes(self.tasa_llegada_cliente1, self.tasa_llegada_cliente2,
-                               self.tasa_llegada_cliente3, self.tasa_llegada_cliente4)
+        self.llegadas_clientes(self.tasa_llegada_clientes)
 
         print("\n\n\n")
         print("-"*40+"INICIO SIMULACIÓN"+ "-"*40)
@@ -175,40 +144,34 @@ class Simulacion:
                 print("[HORA {}]: No llegan clientes a la inmobiliaria".format(self.tiempo_simulacion))
             else:
                 text = "[HORA {}]: Llega(n) ".format(self.tiempo_simulacion)
-                if self.tiempo_simulacion in self.tiempos_llegada_clientes1:
-                    text += "{} cliente(s) tipo 1 ".format(self.tiempos_llegada_clientes1.count(self.tiempo_simulacion))
-                    for i in range(self.tiempos_llegada_clientes1.count(self.tiempo_simulacion)):
+                for i in range(self.tiempos_llegada_clientes.count(self.tiempo_simulacion)):
+                    value = random() #Con esto verificamos de que tipo es el cliente
+                    if value <= 0.432:
+                        text += "Cliente tipo 1 "
                         nuevo_cliente = Persona(1)
-                        """Acá hay que simular una atención de la inmobiliaria"""
                         self.inmobiliaria.atender(nuevo_cliente)
-                if self.tiempo_simulacion in self.tiempos_llegada_clientes2:
-                    text += "{} cliente(s) tipo 2 ".format(self.tiempos_llegada_clientes2.count(self.tiempo_simulacion))
-                    for i in range(self.tiempos_llegada_clientes2.count(self.tiempo_simulacion)):
+                    elif value <= 0.724:
+                        text += "Cliente tipo 2 "
                         nuevo_cliente = Persona(2)
-                        """Acá hay que simular una atención de la inmobiliaria"""
                         self.inmobiliaria.atender(nuevo_cliente)
-                if self.tiempo_simulacion in self.tiempos_llegada_clientes3:
-                    text += "{} cliente(s) tipo 3 ".format(self.tiempos_llegada_clientes3.count(self.tiempo_simulacion))
-                    for i in range(self.tiempos_llegada_clientes3.count(self.tiempo_simulacion)):
+                    elif value <= 0.927:
+                        text += "Cliente tipo 3 "
                         nuevo_cliente = Persona(3)
-                        """Acá hay que simular una atención de la inmobiliaria"""
                         self.inmobiliaria.atender(nuevo_cliente)
-                if self.tiempo_simulacion in self.tiempos_llegada_clientes4:
-                    text += "{} cliente(s) tipo 4 ".format(self.tiempos_llegada_clientes4.count(self.tiempo_simulacion))
-                    for i in range(self.tiempos_llegada_clientes4.count(self.tiempo_simulacion)):
+                    else:
+                        text += "Cliente tipo 4 "
                         nuevo_cliente = Persona(4)
-                        """Acá hay que simular una atención de la inmobiliaria"""
                         self.inmobiliaria.atender(nuevo_cliente)
                 print(text)
             self.tiempo_simulacion += 1
         print("\n\n\n")
         print("-" * 40 + "INFORMACIÓN" + "-" * 40)
         print("\n")
-        print("[CLIENTES ATENDIDOS]: tipo 1: {}, tipo 2: {}, tipo 3: {},"
+        """print("[CLIENTES ATENDIDOS]: tipo 1: {}, tipo 2: {}, tipo 3: {},"
               " tipo 4: {}, total: {}".format(len(self.tiempos_llegada_clientes1),
               len(self.tiempos_llegada_clientes2), len(self.tiempos_llegada_clientes3),
               len(self.tiempos_llegada_clientes4), len(self.tiempos_llegada_clientes)))
-        """print("[CLIENTES 1 COMPRARON]: 0")
+        print("[CLIENTES 1 COMPRARON]: 0")
         print("[CLIENTES 2 COMPRARON]: 0")
         print("[CLIENTES 3 COMPRARON]: 0")
         print("[CLIENTES 4 COMPRARON]: 0")
@@ -238,11 +201,8 @@ if __name__ == '__main__':
                                    4) un cliente tipo 4 cada 24 horas."""
 
     """Tasas de llegada de los clientes"""
-    tasa_llegada_clientes1 = 1 / 96
-    tasa_llegada_clientes2 = 1 / 72
-    tasa_llegada_clientes3 = 1 / 48
-    tasa_llegada_clientes4 = 1 / 24
+    tasa_llegada_clientes = 1 / 96
 
-    s = Simulacion(maximo_tiempo, tasa_llegada_clientes1, tasa_llegada_clientes2, tasa_llegada_clientes3,
-                   tasa_llegada_clientes4)
+    s = Simulacion(maximo_tiempo, tasa_llegada_clientes)
     s.run()
+
