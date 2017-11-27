@@ -10,6 +10,8 @@ from cargar_modelo_comp import Prediccion_Preferencias
 from logit import calculo_probs
 from importar_datos import importar_casas
 from documentar import Documentador
+from numpy.random import choice
+from numpy import cumsum
 
 
 predictor = Prediccion_Preferencias()
@@ -54,7 +56,7 @@ class Inmobiliaria:
     def __init__(self):
         self.nombre = "Inmobiliaria S.A"
         #Por ahora las casa se definen con precios random y los atributos del excel 
-        precios_casas = [randint(100, 200) for i in range(100)]
+        precios_casas = [randint(180, 200) for i in range(100)]
 
         atributos = importar_casas()
         self.casas = []
@@ -84,19 +86,53 @@ class Inmobiliaria:
         probabilidad de no compra"""
         for i in range(len(casas_disponibles)):
             casas_disponibles[i].utilidad = utis[i]
-            casas_disponibles[i].probabilidad = probs[i]
-
+            #casas_disponibles[i].probabilidad = 1 - probs[i]
         #Se ordenan las casas segun su utilidad de mayor a menor
         casas_disponibles = sorted(casas_disponibles, key=lambda x: x.utilidad, reverse=True)
-
         """Comprobamos con las primeras 5 (se puede cambiar) casas si alguna se vende"""
+
+        tuplas = []
+        casas_ofrecidas = []
         for i in range(5):
-            value = random()
-            if casas_disponibles[i].probabilidad < value:
-                casas_disponibles[i].vendida = True
-                print("{} vendida".format(casas_disponibles[i].identificador))
-                documentador.casa_vendida(casas_disponibles[i], tiempo)
-                break
+            casas_ofrecidas.append(casas_disponibles[i])
+            test = casas_disponibles[i].atributos + cliente.preferencias
+            tuplas.append((predictor.prediccion(test)[0], casas_disponibles[i].precio))
+        utis2, probs2 = calculo_probs(tuplas)
+        casas_ofrecidas.append("Negative")
+        draw = choice(casas_ofrecidas, 1, p=probs2)
+        value = random()
+        for i in range(len(probs2)):
+            lista_limites = cumsum(probs2)
+        if 0 <= value <= lista_limites[0]:
+            draw = casas_ofrecidas[0]
+        elif lista_limites[0] < value <= lista_limites[1]:
+            draw = casas_ofrecidas[1]
+        elif lista_limites[1] < value <= lista_limites[2]:
+            draw = casas_ofrecidas[2]
+        elif lista_limites[2] < value <= lista_limites[3]:
+            draw = casas_ofrecidas[3]
+        elif lista_limites[3] < value <= lista_limites[4]:
+            draw = casas_ofrecidas[4]
+        else:
+            draw = casas_ofrecidas[5]
+
+        if draw == "Negative":
+            print("No compra")
+        else:
+            for c in range(len(casas_disponibles)):
+                if casas_disponibles[c] == draw:
+                    print("{} vendida a cliente tipo {}".format(casas_disponibles[c].identificador, cliente.tipo))
+                    documentador.casa_vendida(casas_disponibles[c], tiempo)
+                    casas_disponibles[c].vendida = True
+                    #casas_disponibles.pop(c)
+                    break
+
+       # casas_disponibles.pop(draw)
+        #if casas_disponibles[i].probabilidad < probs[i]:
+        #    casas_disponibles[i].vendida = True
+        #    print("{} vendida a cliente tipo {}".format(casas_disponibles[i].identificador, cliente.tipo))
+        #    documentador.casa_vendida(casas_disponibles[i], tiempo)
+           # break
 
 
 class Simulacion:
@@ -144,7 +180,8 @@ class Simulacion:
         while self.tiempo_simulacion <= self.tiempo_maximo_sim:
             """Verificamos si en el tiempo actual(día) de la simulación llega algún cliente"""
             if not(self.tiempo_simulacion in self.tiempos_llegada_clientes):
-                print("[HORA {}]: No llegan clientes a la inmobiliaria".format(self.tiempo_simulacion))
+                #print("[HORA {}]: No llegan clientes a la inmobiliaria".format(self.tiempo_simulacion))
+                pass
             else:
                 text = "[HORA {}]: Llega(n) ".format(self.tiempo_simulacion)
                 for i in range(self.tiempos_llegada_clientes.count(self.tiempo_simulacion)):
@@ -152,20 +189,24 @@ class Simulacion:
                     if value <= 0.432:
                         text += "Cliente tipo 1 "
                         nuevo_cliente = Persona(1)
+                        print(text)
                         self.inmobiliaria.atender(nuevo_cliente, self.resultados, self.tiempo_simulacion)
                     elif value <= 0.724:
                         text += "Cliente tipo 2 "
                         nuevo_cliente = Persona(2)
+                        print(text)
                         self.inmobiliaria.atender(nuevo_cliente, self.resultados, self.tiempo_simulacion)
                     elif value <= 0.927:
                         text += "Cliente tipo 3 "
                         nuevo_cliente = Persona(3)
+                        print(text)
                         self.inmobiliaria.atender(nuevo_cliente, self.resultados, self.tiempo_simulacion)
                     else:
                         text += "Cliente tipo 4 "
                         nuevo_cliente = Persona(4)
+                        print(text)
                         self.inmobiliaria.atender(nuevo_cliente, self.resultados, self.tiempo_simulacion)
-                print(text)
+
             self.tiempo_simulacion += 1
         print("\n\n\n")
         print("-" * 40 + "INFORMACIÓN" + "-" * 40)
@@ -204,7 +245,7 @@ if __name__ == '__main__':
     """Tasas de llegada de los clientes
     Asumiendo meses de 30 dias y una tasa de 140 clientes por mes
     la tasa queda como 140 / 720"""
-    tasa_llegada_clientes = 140 / 720
+    tasa_llegada_clientes = 20 / 720
 
     s = Simulacion(maximo_tiempo, tasa_llegada_clientes)
     s.run()
