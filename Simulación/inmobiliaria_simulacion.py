@@ -226,7 +226,7 @@ class Simulacion:
                 elif casa.precio_anterior < casa.precio: #Precio aumento
                     new_price = casa.precio - (casa.precio_anterior - casa.precio) * (num_vendidas_periodo - esperado)/esperado
                 else: #Precio se mantuvo
-                    new_price = casa.precio + casa.precio_anterior * (casa.precio / casa.precio_inicial) * (num_vendidas_periodo - esperado)/esperado
+                    new_price = casa.precio + casa.precio * (casa.precio / casa.precio_inicial) * (num_vendidas_periodo - esperado)/esperado
                 """Si el nuevo precio excede el precio inicial, se fija
                 este como tope"""
                 if new_price > casa.precio_inicial:
