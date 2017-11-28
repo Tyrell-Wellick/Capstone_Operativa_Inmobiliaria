@@ -43,6 +43,8 @@ class Casa:
         #Estas variables sirven al momento de atender un cliente
         self.utilidad = 0
         self.probabilidad = 0
+        #Variable para documentacion
+        self.comprado_por = 0
 
     @property
     def vendida(self):
@@ -135,7 +137,7 @@ class Inmobiliaria:
             for c in range(len(casas_disponibles)):
                 if casas_disponibles[c] == draw:
                     print("{} vendida a cliente tipo {}".format(casas_disponibles[c].identificador, cliente.tipo))
-                    documentador.casa_vendida(casas_disponibles[c], tiempo)
+                    documentador.casa_vendida(casas_disponibles[c], tiempo, cliente.tipo)
                     casas_disponibles[c].vendida = True
                     #casas_disponibles.pop(c)
                     break
@@ -144,7 +146,7 @@ class Inmobiliaria:
         #if casas_disponibles[i].probabilidad < probs[i]:
         #    casas_disponibles[i].vendida = True
         #    print("{} vendida a cliente tipo {}".format(casas_disponibles[i].identificador, cliente.tipo))
-        #    documentador.casa_vendida(casas_disponibles[i], tiempo)
+        #    documentador.casa_vendida(casas_disponibles[i], tiempo, cliente.tipo)
            # break
 
 
@@ -266,6 +268,7 @@ class Simulacion:
         """Este metodo ejecuta la simulacion de la inmobiliaria
         se estima aleatoreamente la llegada de clientes"""
         self.llegadas_clientes(self.tasa_llegada_clientes)
+        self.resultados.cambio_precio(0)
 
         print("\n\n\n")
         print("-"*40+"INICIO SIMULACIÓN"+ "-"*40)
@@ -285,6 +288,8 @@ class Simulacion:
                 #self.actualizar_precios2(self.tiempo_simulacion)
                 #self.actualizar_precios3(self.tiempo_simulacion)
                 
+                self.resultados.cambio_precio(self.tiempo_simulacion/(7*24))
+
             else:
                 text = "[HORA {}]: Llega(n) ".format(self.tiempo_simulacion)
                 for i in range(self.tiempos_llegada_clientes.count(self.tiempo_simulacion)):
